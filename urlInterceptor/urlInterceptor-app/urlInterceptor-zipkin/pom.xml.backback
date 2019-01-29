@@ -1,0 +1,245 @@
+<?xml version="1.0"?>
+<project
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+	xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.tdh.urlInterceptor</groupId>
+		<artifactId>urlInterceptor-app</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+	<artifactId>urlInterceptor-zipkin</artifactId>
+	<name>urlInterceptor-zipkin</name>
+	<url>http://maven.apache.org</url>
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<zipkin.springboot.version>2.1.1.RELEASE</zipkin.springboot.version>
+		<workspace.root>${project.basedir}/../../</workspace.root>
+		<main.java.version>1.8</main.java.version>
+		<main.signature.artifact>java18</main.signature.artifact>
+		<start-class>zipkin.server.ZipkinServer</start-class>
+		<maven-invoker-plugin.version>3.1.0</maven-invoker-plugin.version>
+
+		<!-- Manual version updates to work around warnings mentioned in UNDERTOW-1355 -->
+		<xnio.version>3.6.5.Final</xnio.version>
+		<jboss-threads.version>2.3.2.Final</jboss-threads.version>
+		<zipkin.version>2.11.12</zipkin.version>
+		<brave.version>5.5.1</brave.version>
+	</properties>
+	<dependencyManagement>
+		<dependencies>
+			<!-- <dependency> Import dependency management from Spring Boot <groupId>org.springframework.boot</groupId> 
+				<artifactId>spring-boot-dependencies</artifactId> <version>${zipkin.springboot.version}</version> 
+				<type>pom</type> <scope>import</scope> </dependency> -->
+			<dependency>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-starter-parent</artifactId>
+				<version>${zipkin.springboot.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<!-- Static content for the web UI -->
+			<dependency>
+				<groupId>io.zipkin.java</groupId>
+				<artifactId>zipkin-autoconfigure-ui</artifactId>
+				<version>${zipkin.version}</version>
+				<optional>true</optional>
+			</dependency>
+			<!-- MySQL backend -->
+			<dependency>
+				<groupId>io.zipkin.java</groupId>
+				<artifactId>zipkin-autoconfigure-storage-mysql</artifactId>
+				<version>${zipkin.version}</version>
+				<optional>true</optional>
+			</dependency>
+
+			<!-- Kafka Collector -->
+			<dependency>
+				<groupId>io.zipkin.java</groupId>
+				<artifactId>zipkin-autoconfigure-collector-kafka</artifactId>
+				<version>${zipkin.version}</version>
+				<optional>true</optional>
+			</dependency>
+			<dependency>
+				<groupId>com.jayway.jsonpath</groupId>
+				<artifactId>json-path</artifactId>
+				<version>2.4.0</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>io.zipkin.java</groupId>
+				<artifactId>zipkin-server</artifactId>
+				<version>${zipkin.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>ch.qos.logback</groupId>
+				<artifactId>logback-classic</artifactId>
+				<version>1.1.11</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>ch.qos.logback</groupId>
+				<artifactId>logback-core</artifactId>
+				<version>1.1.11</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+	<dependencies>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<!-- Use log4j 2 instead of SLF4J to allow log4j 1.2 used by Kafka 0.8 
+			to still work -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-log4j2</artifactId>
+		</dependency>
+
+		<!-- reduces http transport latency -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-undertow</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>io.undertow</groupId>
+					<artifactId>undertow-websockets-jsr</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<!-- BEGIN WORKAROUNDS FOR UNDERTOW-1355 -->
+		<dependency>
+			<groupId>org.jboss.xnio</groupId>
+			<artifactId>xnio-api</artifactId>
+			<version>${xnio.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.jboss.threads</groupId>
+					<artifactId>jboss-threads</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<dependency>
+			<groupId>org.jboss.threads</groupId>
+			<artifactId>jboss-threads</artifactId>
+			<version>${jboss-threads.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.jboss.xnio</groupId>
+			<artifactId>xnio-nio</artifactId>
+			<version>${xnio.version}</version>
+		</dependency>
+		<!-- END WORKAROUNDS FOR UNDERTOW-1355 -->
+
+		<!-- zipkin requires exporting /health endpoint -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-configuration-processor</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+		<dependency>
+			<groupId>io.zipkin.zipkin2</groupId>
+			<artifactId>zipkin</artifactId>
+			<version>${zipkin.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>io.zipkin.zipkin2</groupId>
+			<artifactId>zipkin-collector</artifactId>
+			<version>${zipkin.version}</version>
+		</dependency>
+
+		<!-- Static content for the web UI -->
+		<dependency>
+			<groupId>io.zipkin.java</groupId>
+			<artifactId>zipkin-autoconfigure-ui</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<!-- MySQL backend -->
+		<dependency>
+			<groupId>io.zipkin.java</groupId>
+			<artifactId>zipkin-autoconfigure-storage-mysql</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- Kafka Collector -->
+		<dependency>
+			<groupId>io.zipkin.java</groupId>
+			<artifactId>zipkin-autoconfigure-collector-kafka</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- Trace api controller activity with Brave -->
+		<dependency>
+			<groupId>io.zipkin.brave</groupId>
+			<artifactId>brave</artifactId>
+			<version>${brave.version}</version>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>io.zipkin.brave</groupId>
+			<artifactId>brave-instrumentation-okhttp3</artifactId>
+			<version>${brave.version}</version>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>io.zipkin.brave</groupId>
+			<artifactId>brave-context-log4j2</artifactId>
+			<version>${brave.version}</version>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.zipkin.zipkin2</groupId>
+			<artifactId>zipkin</artifactId>
+			<version>${zipkin.version}</version>
+			<type>test-jar</type>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.jayway.jsonpath</groupId>
+			<artifactId>json-path</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.zipkin.java</groupId>
+			<artifactId>zipkin-server</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-core</artifactId>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>
